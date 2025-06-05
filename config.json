@@ -1,4 +1,5 @@
-const blockedNameKeywords = [
+{
+  "blockedNameKeywords": [ 
   "aaliyah", "addison", "adeline", "adriana", "adrienne", "aileen", "alaina", "alana", "alayna", "alexa",
   "alexandra", "alexandria", "alexis", "alice", "alicia", "alina", "alison", "alivia", "allison", "alondra",
   "alyvia", "amara", "amber", "amelia", "amina", "ana", "anabelle", "anastasia", "andrea", "angel",
@@ -75,9 +76,8 @@ const blockedNameKeywords = [
   "tracie", "tracy", "trinity", "trisha", "trista", "valeria", "valerie", "valery", "vanessa", "velma",
   "vera", "veronica", "vicki", "vickie", "viola", "violet", "vivian", "viviana", "wanda", "whitney",
   "willow", "winnie", "xena", "xiomara", "yadira", "yamileth", "yareli", "yaretzi", "yasmin", "yeardley",
-  "yesenia", "yolanda", "yvette", "yvonne", "zahra", "zaria", "zariah", "zoe", "zoey", "mary","Ayesha","Carly","Stefanie","Celia","Celly","Dela","melissa"  
-];
-const blockedGeneralKeywords = [
+  "yesenia", "yolanda", "yvette", "yvonne", "zahra", "zaria", "zariah", "zoe", "zoey", "mary","Ayesha","Carly","Stefanie","Celia","Celly","Dela","melissa"  ],
+  "blockedGeneralKeywords": [ 
   "female", "woman", "women", "girl", "wife", "mother", "mom", "mum", "grandmother", "grandma", "married", "husband",
   "ladies", "lady", "ms", "mrs", "dog mom", "cat lady", "widow", "grammy", "he/him", "his/him", "she/her", "her/she", 
   "they/them", "he/they", "she/they", "nonbinary", "genderfluid", "genderqueer", "agender", "demiboy", "demigirl",
@@ -88,11 +88,9 @@ const blockedGeneralKeywords = [
   "cryptocurrency", "finance", "bank", "banker", "investment", "portfolio manager", "hedge fund", "financial advisor", 
   "real estate", "realtor", "broker", "insurance", "claims adjuster", "underwriter", "loan officer", "credit analyst", 
   "cpa", "auditor", "stockbroker", "wealth manager", "actuary", "scam", "scammer", "fraud", "ripoff", "swindle", "cheat", 
-  "deception", "bot", "chat", "dm", "dms", "police", "librarian", "block","computer engineer","Gay"
-
-];
-
-const targetNameKeywords = [
+  "deception", "bot", "chat", "dm", "dms", "police", "librarian", "block","computer engineer" , "Gay"
+ ],
+  "targetNameKeywords": [ 
   "james", "john", "robert", "michael", "william", "david", "richard", "joseph", "thomas", "charles", "christopher", 
   "daniel", "matthew", "anthony", "donald", "mark", "paul", "steven", "andrew", "kenneth", "joshua", "kevin", "brian", 
   "george", "edward", "ronald", "timothy", "jason", "jeffrey", "ryan", "jacob", "gary", "nicholas", "eric", "stephen", 
@@ -101,7 +99,7 @@ const targetNameKeywords = [
   "zachary", "kyle", "walter", "harold", "jeremy", "ethan", "carl", "keith", "roger", "gerald", "christian", "terry", 
   "sean", "arthur", "austin", "noah", "lawrence", "jesse", "joe", "billy", "bryan", "bruce", "jordan", "ralph", "roy", 
   "alan", "wayne", "eugene", "juan", "russell", "louis", "vincent", "bobby", "philip", "johnny", "logan", "randy", "matt", 
-  "tony", "danny", "shawn", "craig", "aaron", "abel", "abraham", "ace", "adrian", "aiden", "albert", "alex", "alfred", 
+  "tony", "danny", "shawn", "craig" , "abel", "abraham", "ace", "adrian", "aiden", "albert", "alex", "alfred", 
   "alvin", "amir", "amos", "anders", "angelo", "archer", "arlo", "asa", "asher", "atlas", "atticus", "august", "avery", 
   "axel", "barrett", "beau", "beckham", "bennett", "bentley", "blake", "bodhi", "bradley", "brady", "brantley", "braxton", 
   "brayden", "brock", "brooks", "bruno", "bryce", "caleb", "callum", "calvin", "camden", "cameron", "carlos", "carson", 
@@ -130,9 +128,8 @@ const targetNameKeywords = [
   "theodore", "titus", "tobias", "todd", "tomas", "tommy", "trace", "travis", "trent", "trenton", "trevor", "tristan", 
   "tucker", "tyson", "vance", "victor", "vincenzo", "wade", "walker", "warren", "waylon", "wesley", "weston", "wilder", 
   "winston", "wyatt", "xavier", "yahir", "yahya", "yosef", "zander", "zane", "zayden", "zeke", "zion", "zyaire", "zyon"
-];
-
-const targetGeneralKeywords = [
+ ],
+  "targetGeneralKeywords": [ 
   "man", "male", "masculine", "himself", "gentleman", "guy", "mr", "sir", "gent", "uncle", "dad", "father", "grandfather", 
   "grandpa", "old man", "elderly", "senior", "widower", "lonely", "divorced", "photographer", "photo", "camera", "nature", 
   "bird", "travel", "woodworking", "gardening", "classic car", "fishing", "model train", "aquarium", "snake", "collector", 
@@ -160,5 +157,6 @@ const targetGeneralKeywords = [
   "aeronautical", "avionics",
   "neurosurgeon", "plastic surgeon", "orthopedic surgeon", "cardiac surgeon",
   "ship captain", "chief engineer", "offshore", "drilling", "reservoir", "blue politics" ,  "air america","american","americans","usa","u.s.","us citizen","united states","america","born in usa","from usa","in the usa","us veteran","us army","retired usa","military usa","american culture","american values","native american","living in america","american made","american pride","from the states","retired in usa","us navy","usmc","usaf","army veteran","navy veteran","retired american","democrat" , "living" ,"scientist", "researcher", "academic", "scholar", "biologist", "biology", "botanist", "botany", "zoologist", "zoology", "geneticist", "genetics", "ecologist", "ecology", "chemist", "chemistry", "physicist", "physics", "astronomer", "astronomy", "geologist", "geology", "seismologist", "seismology", "hydrologist", "hydrology", "oceanographer", "oceanography", "meteorologist", "meteorology", "climatologist", "climatology", "geographer", "geography", "cartographer", "cartography", "anthropologist", "anthropology", "archaeologist", "archaeology", "sociologist", "sociology", "psychologist", "psychology", "criminologist", "criminology", "historian", "history", "philosopher", "philosophy", "linguist", "linguistics", "statistician", "statistics", "mathematician", "mathematics", "toxicologist", "toxicology", "pharmacologist", "pharmacology", "epidemiologist", "epidemiology", "virologist", "virology", "immunologist", "immunology", "neuroscientist", "neuroscience", "biochemist", "biochemistry", "geochemist", "geochemistry", "geophysicist", "geophysics", "environmentalist", "environmental science", "pathologist", "pathology" , "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75" 
-];
-
+ ],
+  "paused": false
+}
