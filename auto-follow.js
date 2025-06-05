@@ -1,3 +1,34 @@
+const remoteConfigUrl = "https://raw.githubusercontent.com/damimi88/auto-follow-config/main/config.json";
+
+// 预定义关键词变量
+let blockedNameKeywords = [];
+let blockedGeneralKeywords = [];
+let targetNameKeywords = [];
+let targetGeneralKeywords = [];
+
+let isPaused = true;
+
+async function fetchRemoteConfig() {
+  try {
+    const res = await fetch(remoteConfigUrl);
+    const cfg = await res.json();
+
+    blockedNameKeywords = cfg.blockedNameKeywords || [];
+    blockedGeneralKeywords = cfg.blockedGeneralKeywords || [];
+    targetNameKeywords = cfg.targetNameKeywords || [];
+    targetGeneralKeywords = cfg.targetGeneralKeywords || [];
+
+    isPaused = !!cfg.paused;
+    console.log("✅ 已同步远程关键词配置");
+  } catch (e) {
+    console.warn("⚠️ 无法加载远程关键词配置", e);
+  }
+}
+
+// 启动时执行一次，之后每30秒刷新
+await fetchRemoteConfig();
+setInterval(fetchRemoteConfig, 30000);
+
 
 // ======= 匹配函数 =======
 function matchWholeWord(text, keywords) {
