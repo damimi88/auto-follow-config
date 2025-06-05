@@ -20,16 +20,18 @@ async function fetchRemoteConfig() {
     targetGeneralKeywords = cfg.targetGeneralKeywords || [];
 
     isPaused = !!cfg.paused;
-    isReady = true;
-
     console.log("✅ 已同步远程关键词配置");
   } catch (e) {
     console.warn("⚠️ 无法加载远程关键词配置", e);
   }
 }
 
-await fetchRemoteConfig(); // 初次加载
-setInterval(fetchRemoteConfig, 30000); // 每30秒刷新配置
+// ✅ 启动时加载配置，包进 async 函数，防止语法报错
+(async () => {
+  await fetchRemoteConfig();
+  isReady = true;
+})();
+setInterval(fetchRemoteConfig, 30000);
 
 // ======= 匹配函数 =======
 function matchWholeWord(text, keywords) {
@@ -78,7 +80,7 @@ async function handleCard(card) {
     }
     processedUsers.add(username);
 
-    // ======= 黑名单检测 =======
+    // 黑名单匹配
     let isBlocked = false;
     if (matchSubstring(nickname, blockedNameKeywords) || matchSubstring(username, blockedNameKeywords)) {
       isBlocked = true;
@@ -92,7 +94,7 @@ async function handleCard(card) {
       return;
     }
 
-    // ======= 白名单检测 =======
+    // 白名单匹配
     let matched = false;
     if (hasBio) {
       if (
@@ -113,7 +115,6 @@ async function handleCard(card) {
       }
     }
 
-    // ======= 命中目标，立即入队并滚动 =======
     if (matched) {
       card._followBtn = card._followBtn ||
         card.querySelector('button[aria-label="Follow"], button[aria-label="关注"]');
@@ -131,7 +132,7 @@ async function handleCard(card) {
   }
 }
 
-// ======= 处理关注队列 =======
+// ======= 队列处理 =======
 async function dequeueFollow() {
   if (isPaused || followQueue.length === 0) {
     setTimeout(dequeueFollow, 500);
@@ -152,7 +153,7 @@ async function dequeueFollow() {
 }
 dequeueFollow();
 
-// ======= 页面监听 =======
+// ======= 页面监听器 =======
 const observer = new MutationObserver(() => {
   if (!isPaused) processAllCards();
 });
