@@ -1,12 +1,13 @@
 const remoteConfigUrl = "https://raw.githubusercontent.com/damimi88/auto-follow-config/main/config.json";
 
-// 预定义关键词变量
+// ======= 初始化变量 =======
 let blockedNameKeywords = [];
 let blockedGeneralKeywords = [];
 let targetNameKeywords = [];
 let targetGeneralKeywords = [];
 
 let isPaused = true;
+let isReady = false; // 标记是否已加载远程关键词配置
 
 async function fetchRemoteConfig() {
   try {
@@ -19,16 +20,16 @@ async function fetchRemoteConfig() {
     targetGeneralKeywords = cfg.targetGeneralKeywords || [];
 
     isPaused = !!cfg.paused;
+    isReady = true;
+
     console.log("✅ 已同步远程关键词配置");
   } catch (e) {
     console.warn("⚠️ 无法加载远程关键词配置", e);
   }
 }
 
-// 启动时执行一次，之后每30秒刷新
-await fetchRemoteConfig();
-setInterval(fetchRemoteConfig, 30000);
-
+await fetchRemoteConfig(); // 初次加载
+setInterval(fetchRemoteConfig, 30000); // 每30秒刷新配置
 
 // ======= 匹配函数 =======
 function matchWholeWord(text, keywords) {
@@ -52,7 +53,6 @@ function normalize(text) {
 
 // ======= 控制变量 =======
 let followCount = 0;
-let isPaused = true;
 let processingCount = 0;
 const maxConcurrent = 5;
 const processedUsers = new Set();
@@ -61,7 +61,7 @@ const followQueue = [];
 // ======= 核心处理逻辑 =======
 async function handleCard(card) {
   try {
-    if (card.dataset.processed || isPaused || processingCount >= maxConcurrent) return;
+    if (!isReady || card.dataset.processed || isPaused || processingCount >= maxConcurrent) return;
     card.dataset.processed = "true";
     processingCount++;
 
@@ -80,17 +80,12 @@ async function handleCard(card) {
 
     // ======= 黑名单检测 =======
     let isBlocked = false;
-
-    // 姓名黑名单（昵称 + 用户名）
     if (matchSubstring(nickname, blockedNameKeywords) || matchSubstring(username, blockedNameKeywords)) {
       isBlocked = true;
     }
-
-    // 简介存在才检查其它类黑名单
     if (!isBlocked && hasBio && matchWholeWord(bioText, blockedGeneralKeywords)) {
       isBlocked = true;
     }
-
     if (isBlocked) {
       console.warn(`⛔️ Blocked: ${nickname} (${username})`);
       processingCount--;
@@ -99,14 +94,10 @@ async function handleCard(card) {
 
     // ======= 白名单检测 =======
     let matched = false;
-
     if (hasBio) {
       if (
         matchSubstring(nickname, targetNameKeywords) ||
-        matchSubstring(username, targetNameKeywords)
-      ) {
-        matched = true;
-      } else if (
+        matchSubstring(username, targetNameKeywords) ||
         matchSubstring(bioText, targetGeneralKeywords)
       ) {
         matched = true;
@@ -114,10 +105,7 @@ async function handleCard(card) {
     } else {
       if (
         matchSubstring(nickname, targetNameKeywords) ||
-        matchSubstring(username, targetNameKeywords)
-      ) {
-        matched = true;
-      } else if (
+        matchSubstring(username, targetNameKeywords) ||
         matchSubstring(nickname, targetGeneralKeywords) ||
         matchSubstring(username, targetGeneralKeywords)
       ) {
@@ -132,7 +120,6 @@ async function handleCard(card) {
       if (card._followBtn) {
         followQueue.push({ btn: card._followBtn, card });
         console.log(`🔜 Enqueued follow: ${nickname} (${username})`);
-        // 滚动视角至当前处理项（底部对齐）
         card.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     }
@@ -144,14 +131,14 @@ async function handleCard(card) {
   }
 }
 
-// ======= 处理队列中的关注动作 =======
+// ======= 处理关注队列 =======
 async function dequeueFollow() {
   if (isPaused || followQueue.length === 0) {
     setTimeout(dequeueFollow, 500);
     return;
   }
 
-  const { btn, card } = followQueue.shift();
+  const { btn } = followQueue.shift();
   try {
     btn.click();
     followCount++;
@@ -160,20 +147,20 @@ async function dequeueFollow() {
   } catch (e) {
     console.warn("⚠️ Follow failed", e);
   } finally {
-    setTimeout(dequeueFollow, 100); // 继续处理下一项
+    setTimeout(dequeueFollow, 100);
   }
 }
 dequeueFollow();
 
-// ======= 页面变动观察器 =======
+// ======= 页面监听 =======
 const observer = new MutationObserver(() => {
   if (!isPaused) processAllCards();
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-// ======= 主处理入口 =======
+// ======= 主入口函数 =======
 async function processAllCards() {
-  if (isPaused) return;
+  if (isPaused || !isReady) return;
   const cards = Array.from(document.querySelectorAll('div[style*="padding"][style*="border-top-width"]'));
   for (const card of cards) {
     if (processingCount < maxConcurrent) {
@@ -182,7 +169,7 @@ async function processAllCards() {
   }
 }
 
-// ======= UI 计数显示框 =======
+// ======= UI 显示框 =======
 const counterBox = document.createElement("div");
 Object.assign(counterBox.style, {
   position: "fixed", bottom: "20px", right: "20px",
