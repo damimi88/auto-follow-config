@@ -1,4 +1,3 @@
-// ❌ 黑名单关键词（女性英文名类）
 const blockedNameKeywords = [
   "aaliyah", "addison", "adeline", "adriana", "adrienne", "aileen", "alaina", "alana", "alayna", "alexa",
   "alexandra", "alexandria", "alexis", "alice", "alicia", "alina", "alison", "alivia", "allison", "alondra",
@@ -78,8 +77,6 @@ const blockedNameKeywords = [
   "willow", "winnie", "xena", "xiomara", "yadira", "yamileth", "yareli", "yaretzi", "yasmin", "yeardley",
   "yesenia", "yolanda", "yvette", "yvonne", "zahra", "zaria", "zariah", "zoe", "zoey", "mary","Ayesha","Carly","Stefanie","Celia","Celly","Dela","melissa"  
 ];
-
-// ❌ 黑名单关键词（其它类：加密、金融、诈骗等）
 const blockedGeneralKeywords = [
   "female", "woman", "women", "girl", "wife", "mother", "mom", "mum", "grandmother", "grandma", "married", "husband",
   "ladies", "lady", "ms", "mrs", "dog mom", "cat lady", "widow", "grammy", "he/him", "his/him", "she/her", "her/she", 
@@ -95,7 +92,6 @@ const blockedGeneralKeywords = [
 
 ];
 
-// 🎯 目标关键词（男性英文名类）
 const targetNameKeywords = [
   "james", "john", "robert", "michael", "william", "david", "richard", "joseph", "thomas", "charles", "christopher", 
   "daniel", "matthew", "anthony", "donald", "mark", "paul", "steven", "andrew", "kenneth", "joshua", "kevin", "brian", 
@@ -136,7 +132,6 @@ const targetNameKeywords = [
   "winston", "wyatt", "xavier", "yahir", "yahya", "yosef", "zander", "zane", "zayden", "zeke", "zion", "zyaire", "zyon"
 ];
 
-// 🎯 目标关键词（其它类：职业、兴趣、身份等）
 const targetGeneralKeywords = [
   "man", "male", "masculine", "himself", "gentleman", "guy", "mr", "sir", "gent", "uncle", "dad", "father", "grandfather", 
   "grandpa", "old man", "elderly", "senior", "widower", "lonely", "divorced", "photographer", "photo", "camera", "nature", 
