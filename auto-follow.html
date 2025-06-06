@@ -7,28 +7,29 @@
 <body>
   <h1>自动关注脚本正在加载...</h1>
   <script type="module">
-    // 加载远程脚本（auto-follow.js）
+    // 加载远程的 auto-follow.js 脚本
     fetch("https://raw.githubusercontent.com/damimi88/auto-follow-config/main/auto-follow.js")
-      .then(res => res.text())
+      .then(res => res.text())  // 获取并解析 JavaScript 内容
       .then(code => {
         // 创建 Blob 对象并动态加载脚本
-        const blob = new Blob([code], { type: 'text/javascript' });
-        const blobUrl = URL.createObjectURL(blob); // 使用 blobUrl 替代 https
-        const script = document.createElement('script');
-        script.type = 'module'; // 使用模块类型
-        script.src = blobUrl;
+        const blob = new Blob([code], { type: 'text/javascript' });  // 将代码转换为 JavaScript
+        const scriptUrl = URL.createObjectURL(blob);  // 创建 Blob URL
 
-        // 当脚本加载完成后
+        const script = document.createElement('script');  // 创建一个新的 <script> 元素
+        script.type = 'module';  // 设置为模块类型
+        script.src = scriptUrl;  // 设置脚本的源为 Blob URL
+
+        // 当脚本加载并执行完成后
         script.onload = () => {
-          console.log('✅ 脚本已加载并开始执行');
+          console.log('✅ 脚本已加载并执行');
         };
 
         // 错误处理
         script.onerror = (error) => {
-          console.error('🚨 脚本加载失败', error);
+          console.error("🚨 脚本加载失败", error);
         };
 
-        // 将脚本添加到页面中
+        // 将脚本添加到页面的 head 部分
         document.head.appendChild(script);
       })
       .catch(err => console.error("🚨 远程脚本加载失败", err));
