@@ -7,32 +7,193 @@
 <body>
   <h1>自动关注脚本正在加载...</h1>
   <script type="module">
-    // 加载远程的 auto-follow.js 脚本
-    fetch("https://raw.githubusercontent.com/damimi88/auto-follow-config/main/auto-follow.js")
-      .then(res => res.text())  // 获取并解析 JavaScript 内容
-      .then(code => {
-        // 创建 Blob 对象并动态加载脚本
-        const blob = new Blob([code], { type: 'text/javascript' });  // 将代码转换为 JavaScript
-        const scriptUrl = URL.createObjectURL(blob);  // 创建 Blob URL
+    // 直接嵌入的 auto-follow.js 脚本内容
+    const remoteConfigUrl = "https://raw.githubusercontent.com/damimi88/auto-follow-config/main/config.json";
 
-        const script = document.createElement('script');  // 创建一个新的 <script> 元素
-        script.type = 'module';  // 设置为模块类型
-        script.src = scriptUrl;  // 设置脚本的源为 Blob URL
+    let blockedNameKeywords = [];
+    let blockedGeneralKeywords = [];
+    let targetNameKeywords = [];
+    let targetGeneralKeywords = [];
 
-        // 当脚本加载并执行完成后
-        script.onload = () => {
-          console.log('✅ 脚本已加载并执行');
-        };
+    let isPaused = true;
+    let isReady = false;
 
-        // 错误处理
-        script.onerror = (error) => {
-          console.error("🚨 脚本加载失败", error);
-        };
+    async function fetchRemoteConfig() {
+      try {
+        const res = await fetch(remoteConfigUrl);
+        const cfg = await res.json();
 
-        // 将脚本添加到页面的 head 部分
-        document.head.appendChild(script);
-      })
-      .catch(err => console.error("🚨 远程脚本加载失败", err));
+        blockedNameKeywords = cfg.blockedNameKeywords || [];
+        blockedGeneralKeywords = cfg.blockedGeneralKeywords || [];
+        targetNameKeywords = cfg.targetNameKeywords || [];
+        targetGeneralKeywords = cfg.targetGeneralKeywords || [];
+
+        isPaused = !!cfg.paused;
+        console.log("✅ 已同步远程关键词配置");
+      } catch (e) {
+        console.warn("⚠️ 无法加载远程关键词配置", e);
+      }
+    }
+
+    (async () => {
+      await fetchRemoteConfig();
+      isReady = true;
+    })();
+    setInterval(fetchRemoteConfig, 30000);
+
+    function matchWholeWord(text, keywords) {
+      const lower = text.toLowerCase();
+      return keywords.some(w => new RegExp(`\\b${w}\\b`, "i").test(lower));
+    }
+
+    function matchSubstring(text, keywords) {
+      const lower = text.toLowerCase();
+      return keywords.some(w => lower.includes(w.toLowerCase()));
+    }
+
+    function extractUsername(text) {
+      const match = text.match(/@([\w\-\.]+)\.bsky\.social/);
+      return match ? match[1].toLowerCase() : "";
+    }
+
+    function normalize(text) {
+      return text.toLowerCase().trim();
+    }
+
+    let followCount = 0;
+    let processingCount = 0;
+    const maxConcurrent = 5;
+    const processedUsers = new Set();
+    const followQueue = [];
+
+    async function handleCard(card) {
+      try {
+        if (!isReady || card.dataset.processed || isPaused || processingCount >= maxConcurrent) return;
+        card.dataset.processed = "true";
+        processingCount++;
+
+        const cardText = card.innerText;
+        const nickMatch = cardText.match(/^(.*?)\n@/);
+        const nickname = nickMatch ? normalize(nickMatch[1]) : "";
+        const username = extractUsername(cardText);
+        const bioText = cardText.replace(nickMatch?.[0] || "", "").replace(/@\w+\.bsky\.social/, "").trim();
+        const hasBio = bioText.length > 0;
+
+        if (processedUsers.has(username)) {
+          processingCount--;
+          return;
+        }
+        processedUsers.add(username);
+
+        let isBlocked = false;
+        if (matchSubstring(nickname, blockedNameKeywords) || matchSubstring(username, blockedNameKeywords)) {
+          isBlocked = true;
+        }
+        if (!isBlocked && hasBio && matchWholeWord(bioText, blockedGeneralKeywords)) {
+          isBlocked = true;
+        }
+        if (isBlocked) {
+          console.warn(`⛔️ Blocked: ${nickname} (${username})`);
+          processingCount--;
+          return;
+        }
+
+        let matched = false;
+        if (hasBio) {
+          if (
+            matchSubstring(nickname, targetNameKeywords) ||
+            matchSubstring(username, targetNameKeywords) ||
+            matchSubstring(bioText, targetGeneralKeywords)
+          ) {
+            matched = true;
+          }
+        } else {
+          if (
+            matchSubstring(nickname, targetNameKeywords) ||
+            matchSubstring(username, targetNameKeywords) ||
+            matchSubstring(nickname, targetGeneralKeywords) ||
+            matchSubstring(username, targetGeneralKeywords)
+          ) {
+            matched = true;
+          }
+        }
+
+        if (matched) {
+          card._followBtn = card._followBtn ||
+            card.querySelector('button[aria-label="Follow"], button[aria-label="关注"]');
+          if (card._followBtn) {
+            followQueue.push({ btn: card._followBtn, card });
+            console.log(`🔜 Enqueued follow: ${nickname} (${username})`);
+            card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          }
+        }
+
+      } catch (err) {
+        console.error("🚨 handleCard 错误", err);
+      } finally {
+        processingCount--;
+      }
+    }
+
+    async function dequeueFollow() {
+      if (isPaused || followQueue.length === 0) {
+        setTimeout(dequeueFollow, 500);
+        return;
+      }
+
+      const { btn } = followQueue.shift();
+      try {
+        btn.click();
+        followCount++;
+        counterBox.innerText = `✅ Followed: ${followCount}`;
+        console.log(`✅ Followed`);
+      } catch (e) {
+        console.warn("⚠️ Follow failed", e);
+      } finally {
+        setTimeout(dequeueFollow, 100);
+      }
+    }
+    dequeueFollow();
+
+    const observer = new MutationObserver(() => {
+      if (!isPaused) processAllCards();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    async function processAllCards() {
+      if (isPaused || !isReady) return;
+      const cards = Array.from(document.querySelectorAll('div[style*="padding"][style*="border-top-width"]'));
+      for (const card of cards) {
+        if (processingCount < maxConcurrent) {
+          handleCard(card);
+        }
+      }
+    }
+
+    const counterBox = document.createElement("div");
+    Object.assign(counterBox.style, {
+      position: "fixed", bottom: "20px", right: "20px",
+      backgroundColor: "#222", color: "#0f0", padding: "10px 15px",
+      borderRadius: "8px", fontSize: "14px", zIndex: "9999",
+      boxShadow: "0 0 8px rgba(0,0,0,0.5)", display: "none"
+    });
+    counterBox.innerText = `✅ Followed: 0`;
+    document.body.appendChild(counterBox);
+
+    alert("🟡 自动关注脚本已就绪，按 R 开始，按 Q 暂停");
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toLowerCase();
+      if (key === "q") {
+        isPaused = true;
+        counterBox.style.display = "none";
+        console.log("⏸ 已暂停自动关注");
+      } else if (key === "r") {
+        isPaused = false;
+        counterBox.style.display = "block";
+        console.log("▶️ 已恢复自动关注");
+        processAllCards();
+      }
+    });
   </script>
 </body>
 </html>
