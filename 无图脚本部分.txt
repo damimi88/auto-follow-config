@@ -1,0 +1,200 @@
+// ======= 用户关键词设置 =======
+const blockedNameKeywords = ["lucy", "jessica"];
+const blockedGeneralKeywords = ["crypto", "bot"];
+const targetNameKeywords = ["mike", "tom", "jack"];
+const targetGeneralKeywords = ["developer", "engineer", "react"];
+
+// ======= 工具函数 =======
+function matchWholeWord(text, keywords) {
+  const lower = text.toLowerCase();
+  return keywords.some(w => new RegExp(`\\b${w}\\b`, "i").test(lower));
+}
+function matchSubstring(text, keywords) {
+  const lower = text.toLowerCase();
+  return keywords.some(w => lower.includes(w.toLowerCase()));
+}
+function extractUsername(text) {
+  const match = text.match(/@([\w\-\.]+)\.bsky\.social/);
+  return match ? match[1].toLowerCase() : "";
+}
+function normalize(text) {
+  return text.toLowerCase().trim();
+}
+
+// ======= 状态控制 =======
+let followCount = 0;
+let isPaused = true;
+const processedUsers = new Set();
+const followQueue = [];
+
+// ======= 精准清除头像 background-image =======
+function clearAvatarBackgrounds() {
+  const avatars = document.querySelectorAll('div[style*="background-image"][class*="css-g5y9jx"]');
+  avatars.forEach(div => {
+    div.style.backgroundImage = 'none';
+  });
+}
+
+// ======= 动态监听头像加载自动清除 =======
+const avatarObserver = new MutationObserver(clearAvatarBackgrounds);
+avatarObserver.observe(document.body, { childList: true, subtree: true });
+
+// ======= 获取用户资料 API =======
+async function getProfileData(handle) {
+  if (!handle || handle.startsWith("did:")) return null;
+  try {
+    const url = `https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${handle}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error(`🚨 获取用户 ${handle} 的资料失败`, err.message || err);
+    return null;
+  }
+}
+
+// ======= 卡片处理逻辑（延迟判断）=======
+async function handleCard(card, retry = 0) {
+  try {
+    if (card.dataset.processed || isPaused) return;
+
+    const cardText = card.innerText;
+    if (!cardText || cardText.length < 10) {
+      if (retry < 3) return setTimeout(() => handleCard(card, retry + 1), 150);
+      return;
+    }
+
+    const nickMatch = cardText.match(/^(.*?)\n@/);
+    const nickname = nickMatch ? normalize(nickMatch[1]) : "";
+    const username = extractUsername(cardText);
+    const bioText = cardText.replace(nickMatch?.[0] || "", "").replace(/@\w+\.bsky\.social/, "").trim();
+    const hasBio = bioText.length > 0;
+
+    if (!username || processedUsers.has(username)) return;
+    card.dataset.processed = "true";
+    processedUsers.add(username);
+
+    if (
+      matchSubstring(nickname, blockedNameKeywords) ||
+      matchSubstring(username, blockedNameKeywords) ||
+      (hasBio && matchWholeWord(bioText, blockedGeneralKeywords))
+    ) {
+      console.warn(`⛔️ Blocked: ${nickname} (${username})`);
+      return;
+    }
+
+    let matched = false;
+    if (hasBio) {
+      if (
+        matchSubstring(nickname, targetNameKeywords) ||
+        matchSubstring(username, targetNameKeywords) ||
+        matchSubstring(bioText, targetGeneralKeywords)
+      ) matched = true;
+    } else {
+      if (
+        matchSubstring(nickname, targetNameKeywords) ||
+        matchSubstring(username, targetNameKeywords) ||
+        matchSubstring(nickname, targetGeneralKeywords) ||
+        matchSubstring(username, targetGeneralKeywords)
+      ) matched = true;
+    }
+
+    if (!matched) {
+      console.log(`🟤 Skipped: ${nickname} (${username}) 不符合目标关键词`);
+      return;
+    }
+
+    const fullHandle = username.includes('.') ? username : `${username}.bsky.social`;
+    const profile = await getProfileData(fullHandle);
+    if (!profile) return;
+
+    const { followersCount = 0, followsCount = 0 } = profile;
+    if (followersCount < 500 && followsCount < 500) {
+      card._followBtn = card._followBtn || card.querySelector('button[aria-label="Follow"], button[aria-label="关注"]');
+      if (card._followBtn) {
+        followQueue.push({ btn: card._followBtn, card });
+        console.log(`🔜 Enqueued follow: ${nickname} (${username}) 粉丝 ${followersCount} / 关注 ${followsCount}`);
+      }
+    } else {
+      console.log(`⛔️ Skipped (粉丝/关注高): ${nickname} (${username}) 粉丝 ${followersCount} / 关注 ${followsCount}`);
+    }
+
+  } catch (err) {
+    console.error("🚨 handleCard 错误", err);
+  }
+}
+
+// ======= 扫描并处理所有卡片 =======
+function processAllCards() {
+  if (isPaused) return;
+  const allCards = Array.from(document.querySelectorAll('div[style*="padding"][style*="border-top-width"]'));
+  const unprocessedCards = allCards.filter(card => !card.dataset.processed);
+  for (const card of unprocessedCards) {
+    handleCard(card);
+  }
+}
+
+// ======= 自动点击关注队列 =======
+async function dequeueFollow() {
+  if (isPaused || followQueue.length === 0) {
+    setTimeout(dequeueFollow, 500);
+    return;
+  }
+
+  const { btn } = followQueue.shift();
+  try {
+    btn.click();
+    followCount++;
+    counterBox.innerText = `✅ Followed: ${followCount}`;
+    console.log(`✅ Followed`);
+  } catch (e) {
+    console.warn("⚠️ Follow failed", e);
+  } finally {
+    setTimeout(dequeueFollow, 100);
+  }
+}
+dequeueFollow();
+
+// ======= 观察页面变化，自动触发处理 =======
+const observer = new MutationObserver(() => {
+  if (!isPaused) {
+    setTimeout(processAllCards, 200);
+  }
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+// ======= 每0.5秒闪现到底部 =======
+setInterval(() => {
+  if (!isPaused) {
+    window.scrollTo({ top: document.body.scrollHeight });
+  }
+}, 500);
+
+// ======= UI 状态框 =======
+const counterBox = document.createElement("div");
+Object.assign(counterBox.style, {
+  position: "fixed", bottom: "20px", right: "20px",
+  backgroundColor: "#222", color: "#0f0", padding: "10px 15px",
+  borderRadius: "8px", fontSize: "14px", zIndex: "9999",
+  boxShadow: "0 0 8px rgba(0,0,0,0.5)", display: "none"
+});
+counterBox.innerText = `✅ Followed: 0`;
+document.body.appendChild(counterBox);
+
+// ======= 快捷键控制（R启动/Q暂停）=======
+alert("🟡 自动关注已就绪，按 R 开始，按 Q 暂停");
+document.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+  if (key === "q") {
+    isPaused = true;
+    counterBox.style.display = "none";
+    console.log("⏸ 已暂停自动关注");
+  } else if (key === "r") {
+    isPaused = false;
+    counterBox.style.display = "block";
+    console.log("▶️ 已恢复自动关注");
+
+    clearAvatarBackgrounds(); // ✅ 精准清除头像 background
+    processAllCards();
+  }
+});
